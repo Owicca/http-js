@@ -1,24 +1,30 @@
-function TCPConn(socket = null, err = null, ended = false, reader = null) {
-    let self = this;
+import * as net from "net";
 
-    self.socket = socket;
-    self.err = err;
-    self.ended = ended;
 
-    self.reader = reader;
+export type TCPConn = {
+    socket: net.Socket,
+    err: null|Error,
+    ended: boolean,
+    reader: null|{
+        resolve: (value: Buffer) => void,
+        reject: (reason: Error) => void,
+    }
+};
 
-    return self;
-}
+function soInit(socket: net.Socket): TCPConn {
+    const conn: TCPConn = {
+        socket: socket,
+        err: null,
+        ended: false,
+        reader: null,
+    };
 
-function soInit(socket) {
-    const conn = TCPConn(socket, null, false, null);
-
-    socket.on('data', (data) => {
+    socket.on('data', (data: Buffer) => {
         console.assert(conn.reader);
 
         conn.socket.pause();
 
-        conn.reader.resolve(data);
+        conn.reader!.resolve(data);
 
         conn.reader = null;
     });
@@ -44,7 +50,7 @@ function soInit(socket) {
     return conn;
 }
 
-function soRead(conn) {
+function soRead(conn: TCPConn): Promise<Buffer> {
     console.assert(!conn.reader);
 
     return new Promise((resolve, reject) => {
@@ -67,7 +73,7 @@ function soRead(conn) {
     });
 }
 
-function soWrite(conn, data) {
+function soWrite(conn: TCPConn, data: Buffer): Promise<void> {
     console.assert(data.length > 0);
 
     return new Promise((resolve, reject) => {
@@ -76,7 +82,7 @@ function soWrite(conn, data) {
             return;
         }
 
-        conn.socket.write(data, (err) => {
+        conn.socket.write(data, (err?: Error) => {
             if (err) {
                 reject(err);
             } else {
@@ -86,4 +92,4 @@ function soWrite(conn, data) {
     });
 }
 
-module.exports = {TCPConn, soInit, soRead, soWrite};
+export {soInit, soRead, soWrite};

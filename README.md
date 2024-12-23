@@ -4,11 +4,13 @@
 
 
 ### steps:
-1. run `node main.js`
+1. run `npm i && npm i --dev`
+1. run `npx tsx main.ts`
 
 ### requests examples:
-1. modify `requests.txt`
-2. run `nc localhost 3000 < requests.txt`
+1. copy `request.txt.example` to `request.txt`
+2. modify `request.txt`
+2. run `nc localhost 3000 < request.txt`
 
 `openssl s_client -verify_quiet -quiet -connect example.com:443`
 

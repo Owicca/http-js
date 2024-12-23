@@ -1,14 +1,34 @@
-const {Buffer} = require("node:buffer");
-const {soInit, soRead, soWrite} = require("./tcp");
+import {Buffer} from "node:buffer";
+import * as net from "net";
 
-function DynBuf() {
-    return {
-        data: Buffer.from([]),
-        length: 0
-    };
+import type { TCPConn } from "./tcp";
+import {soInit, soRead, soWrite} from "./tcp";
+
+
+type BodyReader = {
+    length: number,
+    read: () => Promise<Buffer>,
+};
+
+type HTTPReq = {
+    method: string,
+    uri: Buffer,
+    version: string,
+    headers: Buffer[],
+};
+
+type HTTPRes = {
+    code: number,
+    headers: Buffer[],
+    body: BodyReader,
 }
 
-function bufPush(buf, data) {
+type DynBuf = {
+    data: Buffer,
+    length: number,
+}
+
+function bufPush(buf: DynBuf, data: Buffer): void {
     const newLen = buf.length + data.length;
 
     if (buf.data.length < newLen) {
@@ -27,12 +47,12 @@ function bufPush(buf, data) {
     buf.length = newLen
 }
 
-function bufPop(buf, len) {
+function bufPop(buf: DynBuf, len: number): void {
     buf.data.copyWithin(0, len, buf.length);
     buf.length -= len;
 }
 
-function cutMessage(buf) {
+function cutMessage(buf: DynBuf): null|Buffer {
     const idx = buf.data.subarray(0, buf.length).indexOf('\n');
     if (idx < 0) {
         return null;
@@ -43,14 +63,17 @@ function cutMessage(buf) {
     return msg;
 }
 
-async function serveClient(socket) {
-    const conn = soInit(socket);
-    const buf = DynBuf();
+async function serveClient(socket: net.Socket): Promise<void> {
+    const conn: TCPConn = soInit(socket);
+    const buf: DynBuf = {
+        data: Buffer.alloc(0),
+        length: 0,
+    };
 
     while (true) {
-        const msg = cutMessage(buf);
+        const msg: null|Buffer = cutMessage(buf);
         if (!msg) {
-            const data = await soRead(conn);
+            const data: Buffer = await soRead(conn);
             bufPush(buf, data);
 
             if (data.length === 0) {
@@ -71,4 +94,4 @@ async function serveClient(socket) {
     }
 }
 
-module.exports = {serveClient};
+export {serveClient};
